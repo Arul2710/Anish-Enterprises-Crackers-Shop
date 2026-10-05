@@ -1,11 +1,15 @@
-import { readFileSync, readdirSync, existsSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(scriptDir, '..');
+
+const read = (relativePath) => readFileSync(join(projectRoot, relativePath), 'utf8');
 const slugify = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
 
-const productsSource = read('../src/data/products.js');
+const productsSource = read('src/data/products.js');
 
 const productRows = [...productsSource.matchAll(/\{ serial: (\d+), name: (?:'([^']*)'|"([^"]*)"), category: '([^']*)'/g)].map(([, serial, single, double, category]) => ({
   id: `excel-${serial}`,
@@ -42,8 +46,17 @@ const comboKeyFor = (base) => {
   return card ? card.id : null;
 };
 
-const imagesDir = new URL('../public/images/', import.meta.url).pathname.replace(/^\//, '');
-const bgDir = new URL('../public/bg/', import.meta.url).pathname.replace(/^\//, '');
+const imagesDirPath = join(projectRoot, 'public', 'images');
+const bgDirPath = join(projectRoot, 'public', 'bg');
+// Ensure the scanned folders exist so the manifest degrades gracefully on a
+// fresh Vercel checkout instead of crashing the build.
+mkdirSync(join(imagesDirPath, 'products'), { recursive: true });
+mkdirSync(join(imagesDirPath, 'categories'), { recursive: true });
+mkdirSync(join(imagesDirPath, 'combos'), { recursive: true });
+mkdirSync(bgDirPath, { recursive: true });
+
+const imagesDir = imagesDirPath;
+const bgDir = bgDirPath;
 
 function scanFolder(folder, keyFor = (base) => base) {
   const dir = join(imagesDir, folder);
@@ -78,7 +91,9 @@ const productKeyFor = (base) => {
   return knownSerials.has(serial) ? `excel-${serial}` : null;
 };
 
-const heroFolder = readdirSync(imagesDir).filter((entry) => /^hero\./.test(entry) && statSync(join(imagesDir, entry)).isFile());
+const heroFolder = existsSync(imagesDir)
+  ? readdirSync(imagesDir).filter((entry) => /^hero\./.test(entry) && statSync(join(imagesDir, entry)).isFile())
+  : [];
 const hero = heroFolder.length ? `/images/${heroFolder[0]}` : null;
 
 // Hero background: prefer public/bg/hero.*, fall back to public/images/bg/hero.*
@@ -101,7 +116,7 @@ const manifest = {
 // input, and the app imports it so every card knows its photo on the first paint.
 // Anything under public/ is served as an immutable static asset, so an index kept
 // there could not be imported without the page breaking whenever the file changed.
-const indexPath = new URL('../src/data/imageManifest.json', import.meta.url);
+const indexPath = join(projectRoot, 'src', 'data', 'imageManifest.json');
 writeFileSync(indexPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
 const found = (group) => Object.keys(manifest[group]).length;
