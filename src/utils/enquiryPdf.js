@@ -12,8 +12,7 @@ const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 // Compact column grid for the products table.
 const COL_SNO = MARGIN;
 const COL_PRODUCT = MARGIN + 34;
-const COL_QTY = MARGIN + 320;
-const COL_PRICE = MARGIN + 400;
+const COL_QTY = MARGIN + 445;
 const PRODUCT_MAX_WIDTH = COL_QTY - COL_PRODUCT - 8;
 
 const wrapText = (text, size, maxWidth) => {
@@ -80,9 +79,16 @@ export const enquiryPdfPages = (enquiry) => {
 
   const rule = (size = 7) => text('-'.repeat(Math.max(20, Math.floor(CONTENT_WIDTH / (size * 0.34)))), { size });
 
+  const widthOfText = (value, size) => String(value).length * size * 0.5;
+
+  const pageRightX = (value, size) => PAGE_WIDTH - MARGIN - widthOfText(value, size);
+
   const rowText = (cells) => {
     ensure(11);
-    for (const cell of cells) page.push({ text: cell.text, x: cell.x, y, size: 9, bold: cell.bold });
+    for (const cell of cells) {
+      const x = cell.right ? PAGE_WIDTH - MARGIN - widthOfText(cell.text, 9) : cell.x;
+      page.push({ text: cell.text, x, y, size: 9, bold: cell.bold });
+    }
     y += 11;
   };
 
@@ -90,37 +96,38 @@ export const enquiryPdfPages = (enquiry) => {
     rowText([
       { text: 'S.No', x: COL_SNO, bold: true },
       { text: 'Product Name', x: COL_PRODUCT, bold: true },
-      { text: 'Quantity', x: COL_QTY, bold: true },
-      { text: 'Price', x: COL_PRICE, bold: true },
+      { text: 'Qty', x: COL_QTY, bold: true },
+      { text: 'Price', x: 0, bold: true, right: true },
     ]);
     rule();
   };
 
-  text(business.name.toUpperCase(), { size: 14, bold: true });
-  text('Wholesale Crackers - Sivakasi', { size: 9 });
+  text(business.name.toUpperCase(), { size: 15, bold: true });
+  text('Wholesale Crackers | Sivakasi', { size: 9 });
+  gap(1);
+  text(`ENQUIRY NO: ${enquiry.reference}     DATE: ${formatDateTime(enquiry.createdAt)}`, { size: 9, bold: true });
   text(`Phone / WhatsApp: ${business.phone}${business.email ? `  |  ${business.email}` : ''}`, { size: 8 });
-  text(business.address, { size: 8 });
-  gap(2);
+  gap(1);
   rule();
   gap(2);
 
-  text('ENQUIRY DETAILS', { size: 10, bold: true });
-  text(`Enquiry No: ${enquiry.reference}`);
-  text(`Enquiry Date: ${formatDateTime(enquiry.createdAt)}`);
-  gap(2);
-
   text('CUSTOMER DETAILS', { size: 10, bold: true });
-  text(`Name: ${enquiry.name || '-'}`);
-  text(`Mobile: ${enquiry.mobile || '-'}`);
-  text(`Email: ${enquiry.email || '-'}`);
-  text(`City: ${enquiry.city || '-'}`);
-  text(`Delivery Address: ${enquiry.address || '-'}`);
-  text(`PIN Code: ${enquiry.pin || '-'}`);
-  text(`Occasion: ${enquiry.occasion || '-'}`);
+  const twoCol = (left, right) => {
+    ensure(11);
+    page.push({ text: left, x: MARGIN, y, size: 9 });
+    page.push({ text: right, x: MARGIN + 290, y, size: 9 });
+    y += 11;
+  };
+  twoCol(`Name: ${enquiry.name || '-'}`, `Mobile: ${enquiry.mobile || '-'}`);
+  twoCol(`Email: ${enquiry.email || '-'}`, `City: ${enquiry.city || '-'}`);
+  twoCol(`PIN: ${enquiry.pin || '-'}`, `Occasion: ${enquiry.occasion || '-'}`);
   text(`Preferred Contact: ${enquiry.preferredContact || '-'}`);
+  gap(1);
+  text('Delivery Address:');
+  text(enquiry.address || '-');
   gap(2);
 
-  text('SELECTED PRODUCTS', { size: 10, bold: true });
+  text('PRODUCT DETAILS', { size: 10, bold: true });
   inTable = true;
   tableHeader();
   (enquiry.items || []).forEach((item, index) => {
@@ -139,8 +146,10 @@ export const enquiryPdfPages = (enquiry) => {
       page.push({ text: i === 0 ? String(index + 1) : '', x: COL_SNO, y, size: 9 });
       page.push({ text: nameLines[i], x: COL_PRODUCT, y, size: 9 });
       if (i === nameLines.length - 1) {
-        page.push({ text: String(item.quantity), x: COL_QTY, y, size: 9 });
-        page.push({ text: pdfCurrency(item.price * item.quantity), x: COL_PRICE, y, size: 9 });
+        const qtyText = String(item.quantity);
+        page.push({ text: qtyText, x: COL_QTY, y, size: 9 });
+        const priceText = pdfCurrency(item.price * item.quantity);
+        page.push({ text: priceText, x: pageRightX(priceText, 9), y, size: 9 });
       }
       y += 11;
     }
@@ -160,8 +169,11 @@ export const enquiryPdfPages = (enquiry) => {
       : (enquiry.items || []).reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
 
   text('ORDER SUMMARY', { size: 10, bold: true });
-  text(`Total Units: ${totalUnits}`, { bold: true });
-  text(`Total Amount: ${pdfCurrency(total)}`, { size: 11, bold: true });
+  ensure(12);
+  page.push({ text: `Total Units: ${totalUnits}`, x: MARGIN, y, size: 10, bold: true });
+  const totalText = `Total: ${pdfCurrency(total)}`;
+  page.push({ text: totalText, x: pageRightX(totalText, 10), y, size: 10, bold: true });
+  y += 12;
   gap(2);
 
   text('ADDITIONAL MESSAGE', { size: 10, bold: true });
