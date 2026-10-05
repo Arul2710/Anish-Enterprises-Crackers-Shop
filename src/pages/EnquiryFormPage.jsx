@@ -103,7 +103,7 @@ export function EnquiryFormPage() {
         pdfUrl = await uploadEnquiryPdf(enquiry);
       } catch (uploadError) {
         console.error('PDF upload failed:', uploadError);
-        throw new Error('PDF upload failed. Please try again.');
+        throw new Error(uploadError?.message || 'PDF upload failed. Please try again.');
       }
 
       if (!pdfUrl || !/^https?:\/\//.test(pdfUrl)) {

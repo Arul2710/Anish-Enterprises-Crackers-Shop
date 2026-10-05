@@ -32,7 +32,7 @@ export const uploadEnquiryPdf = async (enquiry) => {
 
   if (!response.ok || !payload?.pdfUrl) {
     console.error('PDF upload failed:', response.status, payload);
-    throw new Error('Unable to prepare your enquiry PDF. Please try again.');
+    throw new Error(payload?.error || 'PDF upload failed. Please try again.');
   }
 
   return payload.pdfUrl;

@@ -25,6 +25,14 @@ written to `uploads/enquiries/`, which are public via the download route.
 
 No database server and no environment file are needed.
 
+One environment variable is required for the enquiry PDF upload:
+
+| Variable | Purpose |
+|---|---|
+| `GOFILE_TOKEN` | Your GoFile account API token (Profile → API). Used when a customer submits an enquiry to upload the generated PDF and create a **direct** GoFile file link for that PDF. Without it the PDF upload step fails with "GOFILE_TOKEN environment variable is not set." and WhatsApp does not open. Create the token at https://gofile.io/profile, and make sure the account has access to the direct-link API. |
+
+Set it like `GOFILE_TOKEN=your_token npm run api` locally, and as an Environment Variable in the Vercel project settings for production.
+
 ---
 
 ## 2. Quick start
