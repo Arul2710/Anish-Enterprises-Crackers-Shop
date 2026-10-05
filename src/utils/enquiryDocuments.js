@@ -1,6 +1,8 @@
 import { business, internationalNumber } from '../config/business';
 import { formatCurrency } from './format';
 
+const messageCurrency = (value) => formatCurrency(value).replace('₹', 'Rs.');
+
 /**
  * The WhatsApp hand-off for a storefront enquiry. There is no PDF and no server:
  * a saved enquiry is opened directly in WhatsApp as a wa.me link whose message box
@@ -42,12 +44,12 @@ export const enquiryWhatsAppMessage = (enquiry) => {
     ...(enquiry.items || []).flatMap((line, index) => [
       `${index + 1}. ${line.name} × ${line.quantity}`,
       `   ${line.packSize || line.categoryLabel || '-'}`,
-      `   Price: ${formatCurrency(line.price * line.quantity)}`,
+      `   Price: ${messageCurrency(line.price * line.quantity)}`,
       '',
     ]),
     `Total Units: ${unitsOf(enquiry)}`,
     '',
-    `Total: ${formatCurrency(totalOf(enquiry))}`,
+    `Total: ${messageCurrency(totalOf(enquiry))}`,
     '',
     'Additional Message:',
     enquiry.notes || '-',

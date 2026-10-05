@@ -56,7 +56,7 @@ app.get('/api/enquiries/:reference/pdf', async (req, res) => {
     }
     const info = await stat(filePath);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${reference}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="${reference}.pdf"`);
     res.setHeader('Content-Length', info.size);
     res.setHeader('Cache-Control', 'public, max-age=3600');
     createReadStream(filePath).pipe(res);
