@@ -96,7 +96,7 @@ export const enquiryPdfPages = (enquiry) => {
     rowText([
       { text: 'S.No', x: COL_SNO, bold: true },
       { text: 'Product Name', x: COL_PRODUCT, bold: true },
-      { text: 'Qty', x: COL_QTY, bold: true },
+      { text: '  Qty', x: COL_QTY, bold: true },
       { text: 'Price', x: 0, bold: true, right: true },
     ]);
     rule();
@@ -147,7 +147,8 @@ export const enquiryPdfPages = (enquiry) => {
       page.push({ text: nameLines[i], x: COL_PRODUCT, y, size: 9 });
       if (i === nameLines.length - 1) {
         const qtyText = String(item.quantity);
-        page.push({ text: qtyText, x: COL_QTY, y, size: 9 });
+        const qtyX = COL_QTY + 1.5 - widthOfText(qtyText, 9) / 2;
+        page.push({ text: qtyText, x: qtyX, y, size: 9 });
         const priceText = pdfCurrency(item.price * item.quantity);
         page.push({ text: priceText, x: pageRightX(priceText, 9), y, size: 9 });
       }
@@ -176,9 +177,11 @@ export const enquiryPdfPages = (enquiry) => {
   y += 12;
   gap(2);
 
-  text('ADDITIONAL MESSAGE', { size: 10, bold: true });
-  text(enquiry.notes && enquiry.notes.trim() ? enquiry.notes : '-');
-  gap(2);
+  if (enquiry.notes && enquiry.notes.trim()) {
+    text('ADDITIONAL MESSAGE', { size: 10, bold: true });
+    text(enquiry.notes);
+    gap(2);
+  }
 
   text('BUSINESS DETAILS', { size: 10, bold: true });
   text(`${business.name}`, { bold: true });
