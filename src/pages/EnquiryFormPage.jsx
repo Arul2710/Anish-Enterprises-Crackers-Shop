@@ -175,6 +175,11 @@ export function EnquiryFormPage() {
               <a className="btn-primary" href={enquiryWhatsAppUrl(savedEnquiry)} target="_blank" rel="noopener noreferrer">
                 Send Enquiry on WhatsApp <MessageCircle size={15} />
               </a>
+              {savedEnquiry.pdfUrl ? (
+                <a className="btn-secondary" href={savedEnquiry.pdfUrl} target="_blank" rel="noopener noreferrer">
+                  View / Download Enquiry PDF
+                </a>
+              ) : null}
             </div>
           </div>
         ) : (
