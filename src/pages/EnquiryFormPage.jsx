@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, Info, LockKeyhole, MessageCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Info, Loader2, LockKeyhole, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { ProductArtwork } from '../components/ProductArtwork';
@@ -79,8 +79,8 @@ export function EnquiryFormPage() {
     }
 
     setIsSubmitting(true);
+    setStep('Uploading PDF...');
     try {
-      setStep('Saving enquiry...');
       const enquiry = await submitEnquiry({
         ...form,
         reference: createReference(),
@@ -94,7 +94,7 @@ export function EnquiryFormPage() {
         enquiryPdfDocument(enquiry);
       } catch (pdfError) {
         console.error('PDF generation failed:', pdfError);
-        throw new Error('Unable to generate your enquiry PDF. Please try again.');
+        throw new Error('PDF generation failed. Please try again.');
       }
 
       setStep('Uploading PDF...');
@@ -103,17 +103,21 @@ export function EnquiryFormPage() {
         pdfUrl = await uploadEnquiryPdf(enquiry);
       } catch (uploadError) {
         console.error('PDF upload failed:', uploadError);
-        throw new Error('Unable to prepare your enquiry PDF. Please try again.');
+        throw new Error('PDF upload failed. Please try again.');
+      }
+
+      if (!pdfUrl || !/^https?:\/\//.test(pdfUrl)) {
+        console.error('PDF URL missing or invalid:', pdfUrl);
+        throw new Error('Unable to create PDF link. Please try again.');
       }
 
       const updated = attachEnquiryPdfUrl(enquiry.reference, pdfUrl) || { ...enquiry, pdfUrl };
       setSavedEnquiry(updated);
-      setStep('');
-      setIsSubmitting(false);
       window.open(enquiryWhatsAppUrl(updated), '_blank', 'noopener,noreferrer');
     } catch (submitError) {
       console.error('Enquiry submission failed:', submitError);
       setError(submitError.message || 'Unable to save your enquiry. Please try again.');
+    } finally {
       setStep('');
       setIsSubmitting(false);
     }
@@ -218,7 +222,7 @@ export function EnquiryFormPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button className="btn-primary w-full sm:w-auto" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (step || 'Preparing enquiry...') : 'Send Enquiry on WhatsApp'} <MessageCircle size={15} />
+              {isSubmitting ? (step || 'Uploading PDF...') : 'Send Enquiry on WhatsApp'} {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : <MessageCircle size={15} />}
             </button>
           </div>
         </form>
