@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------- dependencies
+node_modules/
+.npm/
+
+# ---------------------------------------------------------------- build output
+dist/
+build/
+.vite/
+
+# ---------------------------------------------------------------- local overrides
+# This is a frontend-only project: there is no server environment file and no
+# secrets to protect. Local machine overrides and editor noise are still ignored.
+.env
+.env.*
+*.local
+
+# ---------------------------------------------------------------- logs + tooling
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------------------------------------------------------------- editors + OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+uploads/
