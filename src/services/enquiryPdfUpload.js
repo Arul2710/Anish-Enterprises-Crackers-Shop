@@ -7,8 +7,8 @@ import { enquiryPdfBlob, enquiryPdfFileName } from '../utils/enquiryPdf';
  * filesystem, on Vercel via Vercel Blob — and serves it back inline from the
  * same URL, so WhatsApp recipients view it without any third-party redirect.
  */
-export const uploadEnquiryPdf = async (enquiry) => {
-  const blob = enquiryPdfBlob(enquiry);
+export const uploadEnquiryPdf = async (enquiry, blobArg) => {
+  const blob = blobArg ?? (await enquiryPdfBlob(enquiry));
   const reference = encodeURIComponent(enquiry.reference);
 
   let response;

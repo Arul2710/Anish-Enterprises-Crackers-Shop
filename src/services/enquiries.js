@@ -23,7 +23,7 @@ const sanitizeEnquiry = (value) => {
     occasion: String(value.occasion || ''),
     notes: String(value.notes || ''),
     preferredContact: String(value.preferredContact || 'Phone call'),
-    items: Array.isArray(value.items)
+        items: Array.isArray(value.items)
       ? value.items.map((item) => ({
           id: String(item.id || ''),
           name: String(item.name || ''),
@@ -31,6 +31,7 @@ const sanitizeEnquiry = (value) => {
           packSize: String(item.packSize || ''),
           quantity: Number(item.quantity) || 0,
           price: Number(item.price ?? item.customerPrice) || 0,
+          image: String(item.image || ''),
         }))
       : [],
     indicativeTotal: Number(value.indicativeTotal) || 0,

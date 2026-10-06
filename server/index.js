@@ -1,9 +1,22 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
+
+// Lightweight .env loader so GOFILE_TOKEN can live in a local .env file
+// without adding a dependency. Existing process.env values always win.
+const envFile = path.join(rootDir, '.env');
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);
+    if (match && process.env[match[1]] === undefined) {
+      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+    }
+  }
+}
 const distDir = path.join(rootDir, 'dist');
 
 const app = express();

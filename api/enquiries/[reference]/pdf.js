@@ -1,4 +1,18 @@
 import { uploadPdfToGoFile } from '../../../server/gofile.js';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Lightweight .env loader (Vercel injects env vars directly, this covers local `vercel dev`).
+const envFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);
+    if (match && process.env[match[1]] === undefined) {
+      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+    }
+  }
+}
 
 const REFERENCE_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
 

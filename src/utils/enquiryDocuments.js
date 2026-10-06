@@ -22,12 +22,18 @@ export const enquiryWhatsAppMessage = (enquiry) => {
     : 'Not recorded';
 
   const lines = [
-    'New Enquiry',
+    `Hello ${business.name}, I would like to enquire about the following products. I have attached/shared the enquiry PDF with the complete product details.`,
     '',
     `Enquiry No: ${enquiry.reference}`,
+    `Date: ${placed}`,
     '',
     `Customer: ${enquiry.name || '-'}`,
     `Mobile: ${enquiry.mobile || '-'}`,
+    '',
+    'Products:',
+    ...(enquiry.items || []).map(
+      (line) => `- ${line.name} | ${line.category || line.categoryLabel || '-'} | Qty ${line.quantity} | ${messageCurrency(line.price)} each | ${messageCurrency(line.price * line.quantity)}`,
+    ),
     '',
     `Items: ${(enquiry.items || []).length}`,
     `Total Qty: ${unitsOf(enquiry)}`,

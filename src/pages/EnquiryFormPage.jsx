@@ -4,11 +4,11 @@ import { Link, Navigate } from 'react-router-dom';
 import { ProductArtwork } from '../components/ProductArtwork';
 import { attachEnquiryPdfUrl, createReference, submitEnquiry } from '../services/enquiries';
 import { uploadEnquiryPdf } from '../services/enquiryPdfUpload';
-import { enquiryPdfDocument } from '../utils/enquiryPdf';
+import { enquiryPdfBlob, enquiryPdfFileName } from '../utils/enquiryPdf';
 import { useContent } from '../hooks/useContent';
 import { useEnquiry } from '../hooks/useEnquiry';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { enquiryWhatsAppUrl } from '../utils/enquiryDocuments';
+import { enquiryWhatsAppMessage, enquiryWhatsAppUrl } from '../utils/enquiryDocuments';
 import { formatCurrency } from '../utils/format';
 
 const initialForm = {
@@ -54,6 +54,8 @@ export function EnquiryFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedEnquiry, setSavedEnquiry] = useState(null);
   const [step, setStep] = useState('');
+  const [pdfObjectUrl, setPdfObjectUrl] = useState('');
+  const [shareNote, setShareNote] = useState('');
 
   if (!items.length && !savedEnquiry) return <Navigate to="/cart" replace />;
 
@@ -74,12 +76,12 @@ export function EnquiryFormPage() {
       return;
     }
     if (!items.length) {
-      setError('Your cart is empty. Add products before saving the enquiry.');
+      setError('Please select at least one product before sending the enquiry.');
       return;
     }
 
     setIsSubmitting(true);
-    setStep('Uploading PDF...');
+    setStep('Saving enquiry...');
     try {
       const enquiry = await submitEnquiry({
         ...form,
@@ -90,30 +92,63 @@ export function EnquiryFormPage() {
       });
 
       setStep('Generating PDF...');
+      let pdfBlob;
       try {
-        enquiryPdfDocument(enquiry);
+        pdfBlob = await enquiryPdfBlob(enquiry);
       } catch (pdfError) {
         console.error('PDF generation failed:', pdfError);
-        throw new Error('PDF generation failed. Please try again.');
+        throw new Error('Unable to generate the enquiry PDF. Please try again.');
       }
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      setPdfObjectUrl(objectUrl);
 
       setStep('Uploading PDF...');
-      let pdfUrl;
+      let pdfUrl = '';
       try {
-        pdfUrl = await uploadEnquiryPdf(enquiry);
+        pdfUrl = await uploadEnquiryPdf(enquiry, pdfBlob);
       } catch (uploadError) {
         console.error('PDF upload failed:', uploadError);
-        throw new Error(uploadError?.message || 'PDF upload failed. Please try again.');
+        // A missing public link must not lose the enquiry: the PDF can still be
+        // downloaded and shared locally.
+        pdfUrl = '';
       }
 
-      if (!pdfUrl || !/^https?:\/\//.test(pdfUrl)) {
-        console.error('PDF URL missing or invalid:', pdfUrl);
-        throw new Error('Unable to create PDF link. Please try again.');
-      }
-
-      const updated = attachEnquiryPdfUrl(enquiry.reference, pdfUrl) || { ...enquiry, pdfUrl };
+      const updated = pdfUrl ? attachEnquiryPdfUrl(enquiry.reference, pdfUrl) || { ...enquiry, pdfUrl } : enquiry;
       setSavedEnquiry(updated);
+
+      // 1) Best: share the generated PDF straight to WhatsApp via the device
+      //    share sheet when the browser supports file sharing.
+      const pdfFile = new File([pdfBlob], enquiryPdfFileName(updated), { type: 'application/pdf' });
+      let shared = false;
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({ files: [pdfFile], title: `Enquiry ${updated.reference}`, text: enquiryWhatsAppMessage(updated) });
+          shared = true;
+        }
+      } catch (shareError) {
+        if (shareError?.name !== 'AbortError') {
+          console.error('Web Share failed:', shareError);
+        }
+      }
+
+      // 2) Fallback: download the PDF and open WhatsApp with the message so the
+      //    user can attach the file manually.
+      if (!shared) {
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = enquiryPdfFileName(updated);
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+
       window.open(enquiryWhatsAppUrl(updated), '_blank', 'noopener,noreferrer');
+
+      setShareNote(
+        shared
+          ? 'The enquiry PDF was shared through your device. WhatsApp opened with your message.'
+          : 'The enquiry PDF was downloaded to your device. Attach it in WhatsApp, and see the download button below if you need it again.',
+      );
     } catch (submitError) {
       console.error('Enquiry submission failed:', submitError);
       setError(submitError.message || 'Unable to save your enquiry. Please try again.');
@@ -147,8 +182,11 @@ export function EnquiryFormPage() {
               <p className="mt-3 text-sm leading-6 text-stone-500">
                 Enquiry prepared successfully.<br />
                 Enquiry No: <strong className="text-ink">{savedEnquiry.reference}</strong><br />
-                PDF attached as a link in your WhatsApp message.
+                {savedEnquiry.pdfUrl
+                  ? 'PDF attached as a link in your WhatsApp message.'
+                  : 'You can download the generated enquiry PDF below and attach it in WhatsApp.'}
               </p>
+              {shareNote && <p className="mt-3 text-xs font-semibold text-stone-600">{shareNote}</p>}
             </div>
 
             <div className="card-surface rounded-2xl p-6 sm:p-8">
@@ -178,6 +216,11 @@ export function EnquiryFormPage() {
               {savedEnquiry.pdfUrl ? (
                 <a className="btn-secondary" href={savedEnquiry.pdfUrl} target="_blank" rel="noopener noreferrer">
                   View / Download Enquiry PDF
+                </a>
+              ) : null}
+              {pdfObjectUrl ? (
+                <a className="btn-secondary" href={pdfObjectUrl} download={enquiryPdfFileName(savedEnquiry)}>
+                  Download Enquiry PDF
                 </a>
               ) : null}
             </div>
